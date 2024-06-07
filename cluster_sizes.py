@@ -38,7 +38,7 @@ if __name__ == "__main__":
         tmp_sizes = []
         # c = [cluster id, size, psd, syn]
         for i, c in enumerate(clusters):
-            assert len(c) == 4, 'combined_results.csv changed names?'
+            # assert len(c) == 4, 'combined_results.csv changed names?'
             cluster_size = int(c[1])
             # print(f'cluster #{i} has a size of {cluster_size} pixels.')
             tmp_sizes.append(cluster_size)
@@ -54,19 +54,27 @@ if __name__ == "__main__":
             CT += tmp_sizes
     
     
-    # below 10,000
-    b = 10
-    # plt.xscale('log', base=b) 
-    # plt.yscale('log', base=b) 
-    plt.hist(CT, label='CT', bins=range(155, 10000, 10))
-    plt.hist(EE, label='EE', bins=range(155, 10000, 10))
-    plt.title("EE vs CT Cluster Size Distribution")
-    plt.xlabel("Cluster Size")
-    plt.ylabel("Counts")
-    xticks = [155, 500, 1000, 2000, 4000, 8000]
-    plt.xticks(xticks, xticks)
-    plt.legend()
+    for r in [range(155, 1500, 10), range(1500, 30000, 10)]:
+        plt.figure()
+        CT_hist = plt.hist(CT, label='CT', bins=r, density=True)
+        CT_counts = CT_hist[0]
+        CT_bins = CT_hist[1][:-1]
+        EE_hist = plt.hist(EE, label='EE', bins=r, density=True)
+        EE_counts = EE_hist[0]
+        EE_bins = EE_hist[1][:-1]
+        plt.title("EE vs CT Cluster Size Distribution")
+        plt.xlabel("Cluster Size")
+        plt.ylabel("Relative Counts")
+        plt.figure()
+        plt.plot(CT_bins, CT_counts, label="CT")
+        plt.plot(EE_bins, EE_counts, label="EE")
+        plt.title("EE vs CT Cluster Size Distribution")
+        plt.xlabel("Cluster Size")
+        plt.ylabel("Relative Counts")
+        plt.legend()
+        plt.show()
     
+    '''
     import statistics
     EE_mean = statistics.mean(EE)
     CT_mean = statistics.mean(CT)
@@ -74,10 +82,7 @@ if __name__ == "__main__":
     print(abs(EE_mean - CT_mean))
     plt.axvline(x=EE_mean, color='orange', linewidth=0.5)
     plt.axvline(x=EE_mean, color='blue', linewidth=0.5)
-    
-    plt.show()
-
-    assert False, ":("
+    '''
 
     '''
     b = 10
@@ -99,8 +104,10 @@ if __name__ == "__main__":
     plt.show()
     '''
 
+    '''
     # above 10,000
     plt.figure()
+    b = 10
     #plt.xscale('log', base=b) 
     #plt.yscale('log', base=b) 
     CT = [val for val in CT if val > 10000]
@@ -114,6 +121,7 @@ if __name__ == "__main__":
     #plt.xticks(xticks, xticks)
     plt.legend()
     plt.show()
+    '''
     
     print(f'Number of EE clusters: {len(EE)}')
     print(f'Number of CT clusters: {len(CT)}')
