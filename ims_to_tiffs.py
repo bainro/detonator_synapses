@@ -1,3 +1,5 @@
+# if we do use this, make sure to add the cell counts as prefixes too!
+
 import tifffile
 from imaris_ims_file_reader.ims import ims
 
