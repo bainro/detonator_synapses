@@ -13,4 +13,11 @@ for ims_file in ims_files:
         root_name = ims_file.split(r'/')[-1][:-4]
         ims_data = ims(ims_file)
         converted_file = os.path.join(results_dir, root_name + ".tiff")
-        tifffile.imwrite(converted_file, ims_data[0,:,0,:,:])
+        # might be able to recover all pixels but a few,
+        # but don't care enough right now. https://tinyurl.com/5xfpkyr6
+        try:
+            tifffile.imwrite(converted_file, ims_data[0,:,0,:,:])    
+        except:
+            print()
+            print(f'{ims_file.split(r"/")[-1]} CONTAINS CORRUPTED PIXEL(S). SKIPPED!')
+            print()
