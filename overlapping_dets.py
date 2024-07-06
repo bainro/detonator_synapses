@@ -6,7 +6,6 @@ import datetime
 import numpy as np
 import multiprocessing as mp
 import matplotlib.pyplot as plt
-from memory_profiler import profile
 from skimage.morphology import square
 from skimage.segmentation import flood
 
@@ -144,7 +143,6 @@ def block_worker(b, c, h_offset, w_offset, size_thresh):
                     c.append(['normal', cluster_mask, h_offset, w_offset])
     return c # end `def block_worker`
 
-# @profile
 def img_worker(ch1, ch2, results_dir, r_threshold, g_threshold):
     # Separate red (PSD95) and green (synaptotagmin 1) channels.
     # Saves images in results_dir.
@@ -186,6 +184,11 @@ def img_worker(ch1, ch2, results_dir, r_threshold, g_threshold):
     #     print(f'\ndtype: {ch.dtype}, shape: {ch.shape}')
     #     print(f'min: {np.min(ch)}, max: {np.max(ch)}')
     
+    corr_file = os.path.join(results_dir, f"{name_root}_corr.txt")
+    R1 = np.corrcoef([og_red.flatten(), og_green.flatten()])
+    with open(corr_file, 'w') as cf:
+        cf.write(f"{R1[0,1]}\n")
+    
     red[og_red < r_threshold] = 0
     red[og_green < g_threshold] = 0
     green[og_green < g_threshold] = 0
@@ -212,6 +215,7 @@ def img_worker(ch1, ch2, results_dir, r_threshold, g_threshold):
     original = np.dstack([norm_red, norm_green, np.zeros_like(og_green)])
     del norm_red, norm_green
     clusters_removed = original.copy()
+    only_clusters = np.zeros_like(original)
     viz_clusters = np.zeros_like(binary_thresh)
     colors = [x / 8 for x in range(1, 9)]
     
@@ -303,12 +307,17 @@ def img_worker(ch1, ch2, results_dir, r_threshold, g_threshold):
                     for x,y in c_mask:
                         viz_clusters[x,y] = colors[num_rows % len(colors)]
                         clusters_removed[x,y] = 0
+                        only_clusters[x,y] = original[x,y]
                         cluster_psd += og_red[x,y]
                         cluster_syn += og_green[x,y]
                     avg_psd = cluster_psd / size
                     avg_syn = cluster_syn / size
                     results.append([num_rows, size, avg_psd, avg_syn])
     del edge_masks
+    
+    R1 = np.corrcoef([only_clusters[:,:,0].flatten(), only_clusters[:,:,1].flatten()])
+    with open(corr_file, 'a') as cf:
+        cf.write(f"{R1[0,1]}")
     
     median_psd = np.median(og_red[viz_clusters > 0])
     median_syn = np.median(og_green[viz_clusters > 0])
@@ -361,7 +370,7 @@ if __name__ == "__main__":
     except:
         pass
     
-    n_proc = 4
+    n_proc = 2
     img_pool = mp.Pool(n_proc)
     
     # thresh_search = []
