@@ -238,6 +238,47 @@ while clusters:
                 results.append([num_rows, size, avg_psd, avg_syn])
 del edge_masks
 
+fig, ax = plt.subplots(nrows=2, ncols=3)
+fig.set_figheight(15)
+fig.set_figwidth(22)
+original[:,:,1][original[:,:,0] == 0] = 0
+original[:,:,2][original[:,:,0] == 0] = 0
+ax[0,0].imshow(original * gain, interpolation='none')
+ax[0,0].set_title('original')
+ax[0,1].imshow(only_clusters * gain, interpolation='none')
+ax[0,1].set_title('only clusters')
+clusters_removed[original[:,:,0] == 0] = 0
+ax[0,2].imshow(clusters_removed * gain, interpolation='none')
+ax[0,2].set_title('clusters removed')
+# Note: Green and Blue are swapped relative to some of the paper's images
+_original = original.copy() * gain
+_original[:,:,1:] = 0
+ax[1,0].imshow(_original, interpolation='none')
+ax[1,0].set_title('PSD95')
+_original = original.copy() * gain
+_original[:,:,:2] = 0
+ax[1,1].imshow(_original, interpolation='none')
+ax[1,1].set_title('GCaMP6')
+_original = original.copy() * gain
+_original[:,:,0] = 0
+_original[:,:,2] = 0
+for i in range(2):
+    for j in range(3):
+        ax[i,j].set_axis_off()
+ax[1,2].imshow(_original, interpolation='none')
+ax[1,2].set_title('Syn-1')
+chs_img_path = f'{name_root}.png'
+chs_img_path = os.path.join(results_dir, chs_img_path)
+plt.savefig(chs_img_path, dpi=300)
+plt.close(fig) # prevent plotting huge figures inline
+
+del _original
+
+cluster_img_path = f'{name_root}.png'
+cluster_img_path = os.path.join(results_dir, cluster_img_path)
+plt.savefig(cluster_img_path, dpi=300)
+plt.close(fig) # prevent plotting huge figures inline
+
 def create_rmap(flat_ch1, flat_ch2):
     # create correlation map
     R_map = np.zeros((61,61))
@@ -255,9 +296,7 @@ def create_rmap(flat_ch1, flat_ch2):
   
     return R_map
 
-for condition in ["without", "only"]:
-# Hack for running in parallel.
-# for condition in ["without"]:
+for condition in ["only", "without"]:
     if condition == "without":
         img = clusters_removed
     else:
