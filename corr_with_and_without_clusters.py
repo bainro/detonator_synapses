@@ -21,8 +21,8 @@ for cf in corr_files:
 
 f = plt.figure() # figsize=(8,6)
 n_bins = 20
-plt.hist(no_clusters_Rs, alpha=0.5, label="no clusters R")
-plt.hist(clusters_Rs, alpha=0.5, label="clusters R")
+plt.hist(no_clusters_Rs, alpha=0.5, label="clusters removed")
+plt.hist(clusters_Rs, alpha=0.5, label="only clusters")
 no_avg = sum(no_clusters_Rs) / len(no_clusters_Rs)
 only_avg = sum(clusters_Rs) / len(clusters_Rs)
 print(f'avg R without clusters: {no_avg:.2f}')
@@ -33,6 +33,6 @@ plt.xlabel("Pearson Correlation Coefficients") # size=14
 plt.ylabel("Count") # size=14
 axes = f.gca()
 axes.yaxis.get_major_locator().set_params(integer=True)
-plt.title("\nPSD95 and SYN-1 Cross-Correlations\nWith Only Clusters and Without Clusters\n")
+plt.title("\nPSD95 and SYN-1 Cross-Correlations\nWithout Clusters and With Only Clusters\n")
 plt.legend() # loc='upper right')
-plt.savefig("R_histograms.png")
+plt.savefig("R_histograms.png", bbox_inches='tight', dpi=300)
