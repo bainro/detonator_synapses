@@ -238,6 +238,7 @@ while clusters:
                 results.append([num_rows, size, avg_psd, avg_syn])
 del edge_masks
 
+'''
 fig, ax = plt.subplots(nrows=2, ncols=3)
 fig.set_figheight(15)
 fig.set_figwidth(22)
@@ -273,11 +274,7 @@ plt.savefig(chs_img_path, dpi=300)
 plt.close(fig) # prevent plotting huge figures inline
 
 del _original
-
-cluster_img_path = f'{name_root}.png'
-cluster_img_path = os.path.join(results_dir, cluster_img_path)
-plt.savefig(cluster_img_path, dpi=300)
-plt.close(fig) # prevent plotting huge figures inline
+'''
 
 def create_rmap(ch1, ch2):
     # create correlation map
@@ -320,8 +317,8 @@ for condition in ["only", "without", "all"]:
     
     # correlation including only detected clusters
     with open(corr_file, 'w') as cf:
-        # main diagonal should be all 1s
-        assert R1[0,0] == R1[1,1] == R1[2,2] == 1
+        # main diagonal should be all 1s. Weird 0.9999 values sometimes
+        assert R1[0,0] + R1[1,1] + R1[2,2] > 2.98
         # RG, RB, GB correlations
         cf.write(f"{R1[0,1]}\n{R1[0,2]}\n{R1[1,2]}\n")
     
