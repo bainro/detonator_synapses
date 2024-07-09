@@ -279,17 +279,17 @@ cluster_img_path = os.path.join(results_dir, cluster_img_path)
 plt.savefig(cluster_img_path, dpi=300)
 plt.close(fig) # prevent plotting huge figures inline
 
-# @TODO rename, these aren't flat!
-def create_rmap(flat_ch1, flat_ch2):
+def create_rmap(ch1, ch2):
     # create correlation map
     R_map = np.zeros((61,61))
     # this channel does not move
-    _static_ch = flat_ch1[30:-31, 30:-31]
+    # this channel can have values equal to 0
+    _static_ch = ch1[30:-31, 30:-31]
     static_ch = _static_ch[_static_ch > 0].flatten()
     for i in range(61):
         for j in range(61):
-            # @TODO this can include pixel values of 0 from clusters or bkgn being removed!!!
-            _slide_ch = flat_ch2[i:i-61, j:j-61]
+            # this channel should not have 0s
+            _slide_ch = ch2[i:i-61, j:j-61]
             slide_ch = _slide_ch[_static_ch > 0].flatten()
             R1 = np.corrcoef(static_ch, slide_ch)
             R_map[i,j] = R1[0,1]
@@ -297,36 +297,42 @@ def create_rmap(flat_ch1, flat_ch2):
   
     return R_map
 
-for condition in ["only", "without"]:
+for condition in ["only", "without", "all"]:
+    
     if condition == "without":
         img = clusters_removed
-    else:
+    elif condition == "only":
         img = only_clusters
+    elif condition == "all":
+        img = original
+    else:
+        assert False, "illegal case"
         
     corr_file = os.path.join(results_dir, f"{name_root}_{condition}_corr.txt")
-
-    # @TODO rename, these aren't flat!
-    _flat_red = img[:,:,0]
-    flat_red = _flat_red[_flat_red > 0].flatten()
-    _flat_green = img[:,:,1]
-    flat_green = _flat_green[_flat_red > 0].flatten()
-    _flat_blue = img[:,:,2]
-    flat_blue = _flat_blue[_flat_red > 0].flatten()
+        
+    _red = img[:,:,0]
+    flat_red = _red[_red > 0].flatten()
+    _green = img[:,:,1]
+    flat_green = _green[_red > 0].flatten()
+    _blue = img[:,:,2]
+    flat_blue = _blue[_red > 0].flatten()
     R1 = np.corrcoef([flat_red, flat_green, flat_blue])
     
     # correlation including only detected clusters
     with open(corr_file, 'w') as cf:
+        # main diagonal should be all 1s
+        assert R1[0,0] == R1[1,1] == R1[2,2] == 1
         # RG, RB, GB correlations
-        # implicit RR == GG == BB == 1
         cf.write(f"{R1[0,1]}\n{R1[0,2]}\n{R1[1,2]}\n")
     
     pairwise_chs = []
-    pairwise_chs.append([_flat_red, _flat_red, 'RR'])
-    pairwise_chs.append([_flat_red, _flat_green, 'RG'])
-    pairwise_chs.append([_flat_red, _flat_blue, 'RB'])
-    pairwise_chs.append([_flat_green, _flat_green, 'GG'])
-    pairwise_chs.append([_flat_green, _flat_blue, 'GB'])
-    pairwise_chs.append([_flat_blue, _flat_blue, 'BB']) # GCaMP - GCaMP
+    pairwise_chs.append([_red,   original[:,:,0], 'RR'])
+    pairwise_chs.append([_red,   original[:,:,1], 'RG'])
+    pairwise_chs.append([_red,   original[:,:,2], 'RB'])
+    pairwise_chs.append([_green, original[:,:,1], 'GG'])
+    pairwise_chs.append([_green, original[:,:,2], 'GB'])
+    pairwise_chs.append([_blue,  original[:,:,2], 'BB']) # GCaMP - GCaMP
+    
     for ch1, ch2, name in pairwise_chs:
         R_map = create_rmap(ch1, ch2)
     
