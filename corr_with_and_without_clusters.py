@@ -19,7 +19,7 @@ for cf in corr_files:
         no_clusters_Rs.append(lines[0])
         clusters_Rs.append(lines[1])
 
-f = plt.figure() # figsize=(8,6)
+f = plt.figure()
 n_bins = 20
 plt.hist(no_clusters_Rs, alpha=0.5, label="clusters removed")
 plt.hist(clusters_Rs, alpha=0.5, label="only clusters")
