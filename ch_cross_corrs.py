@@ -279,6 +279,7 @@ cluster_img_path = os.path.join(results_dir, cluster_img_path)
 plt.savefig(cluster_img_path, dpi=300)
 plt.close(fig) # prevent plotting huge figures inline
 
+# @TODO rename, these aren't flat!
 def create_rmap(flat_ch1, flat_ch2):
     # create correlation map
     R_map = np.zeros((61,61))
@@ -287,7 +288,7 @@ def create_rmap(flat_ch1, flat_ch2):
     static_ch = _static_ch[_static_ch > 0].flatten()
     for i in range(61):
         for j in range(61):
-            # start top left
+            # @TODO this can include pixel values of 0 from clusters or bkgn being removed!!!
             _slide_ch = flat_ch2[i:i-61, j:j-61]
             slide_ch = _slide_ch[_static_ch > 0].flatten()
             R1 = np.corrcoef(static_ch, slide_ch)
@@ -303,7 +304,8 @@ for condition in ["only", "without"]:
         img = only_clusters
         
     corr_file = os.path.join(results_dir, f"{name_root}_{condition}_corr.txt")
-        
+
+    # @TODO rename, these aren't flat!
     _flat_red = img[:,:,0]
     flat_red = _flat_red[_flat_red > 0].flatten()
     _flat_green = img[:,:,1]
