@@ -2,10 +2,7 @@
 # Green is actually SYN1, Blue is GCaMP.
 
 import os
-import csv
 import cv2
-import time
-import datetime
 import matplotlib
 import numpy as np
 import multiprocessing as mp
@@ -145,8 +142,6 @@ colors = [x / 8 for x in range(1, 9)]
 # print(f"\n{len(clusters)} clusters unfiltered!\n")
 edge_masks = []
 i = -1 # allows incrementing at the beginning of loop
-# save cluster results in individual csv files too
-csv_name = os.path.join(results_dir, f"{name_root}.csv")
 results = []
 while clusters:
     i += 1
@@ -335,9 +330,11 @@ for condition in ["only", "without", "all"]:
     
         fig = plt.figure()
         cmap = matplotlib.colormaps['jet']
+        
         _R_map = plt.imshow(R_map, cmap=cmap, interpolation='none', vmax=1, vmin=-0.2)
         plt.colorbar(_R_map)
         
-        R_map_path = os.path.join(results_dir, f'{condition}_{name}_Rmap.png')
-        plt.savefig(R_map_path, dpi=300)
+        R_map_path = os.path.join(results_dir, f'{condition}_{name}_Rmap')
+        np.save(R_map_path + ".npy", R_map)
+        plt.savefig(R_map_path + ".png", dpi=300)
         plt.close(fig)
