@@ -1,3 +1,4 @@
+# histogram of correlations for only clusters vs clusters removed
 import os
 import matplotlib.pyplot as plt
 
