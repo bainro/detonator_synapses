@@ -246,17 +246,18 @@ del edge_masks
 
 def create_rmap(ch1, ch2):
     # create correlation map
-    R_map = np.zeros((61,61))
+    R_map = np.zeros((121,121))
     # this channel does not move
     # this channel can have values equal to 0
-    _static_ch = ch1[30:-31, 30:-31]
-    static_ch = _static_ch[_static_ch > 0].flatten()
-    for i in range(61):
-        for j in range(61):
+    _static_ch = ch1[60:-61, 60:-61]
+    for i in range(121):
+        for j in range(121):
             # this channel should not have 0s
-            _slide_ch = ch2[i:i-61, j:j-61]
-            slide_ch = _slide_ch[_static_ch > 0].flatten()
-            R1 = np.corrcoef(static_ch, slide_ch)
+            _slide_ch = ch2[i:i-121, j:j-121]
+            # make sure we're not including any 0s from the blank crop margins
+            slide_ch = _slide_ch[np.logical_and(_static_ch > 0, _slide_ch > 0)]
+            static_ch = _static_ch[np.logical_and(_static_ch > 0, _slide_ch > 0)]
+            R1 = np.corrcoef(static_ch.flatten(), slide_ch.flatten())
             R_map[i,j] = R1[0,1]
             print(f'R_map[{i},{j}]: {R1[0,1]}')
   
