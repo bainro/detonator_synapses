@@ -320,7 +320,7 @@ for condition in ["all"]:
             stride = 16
             R_map_dim = (2*n_offsets+1)
             R_map = np.zeros((R_map_dim, R_map_dim))
-            with open('info.txt', 'w') as f:
+            with open('info.txt', 'a+') as f:
                 with redirect_stdout(f):
                     print(f"Calculating: {name}")
                     print(f"stride: {stride}, n_offset: {n_offsets}")
