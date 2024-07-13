@@ -3,11 +3,13 @@
 
 import os
 import cv2
+import ray
 import matplotlib
 import numpy as np
 import multiprocessing as mp
 import matplotlib.pyplot as plt
 from skimage.morphology import square
+from contextlib import redirect_stdout
 from skimage.segmentation import flood
 
 
@@ -129,6 +131,7 @@ binary_thresh[binary_thresh > 0] = 1
 
 clusters = []
 H, W = red.shape 
+'''
 # for refining clusters that were found on the edge of a main_block
 for h in range(0, H, block_size):
     for w in range(0, W, block_size):
@@ -137,6 +140,7 @@ for h in range(0, H, block_size):
         # skip any that are blank (i.e. pure black, not signal)
         if block.sum() == 0: continue
         clusters = block_worker(block, clusters, h, w, size_thresh)
+'''
 
 gain = 3
 norm_red = og_red / og_red.max()
@@ -244,6 +248,7 @@ while clusters:
                 results.append([num_rows, size, avg_psd, avg_syn])
 del edge_masks
 
+'''
 def create_rmap(ch1, ch2):
     # create correlation map
     R_map = np.zeros((121,121))
@@ -262,6 +267,7 @@ def create_rmap(ch1, ch2):
             print(f'R_map[{i},{j}]: {R1[0,1]}')
   
     return R_map
+'''
 
 # for condition in ["only", "without", "all"]:
 for condition in ["all"]:
@@ -306,16 +312,66 @@ for condition in ["all"]:
     pairwise_chs.append([_blue,  original[:,:,3], 'BD'])
     pairwise_chs.append([_dapi,  original[:,:,3], 'DD']) # DAPI - DAPI
     
+    NUM_WORKERS = 3 * mp.cpu_count() // 4 # i.e. 75%
+    ray.shutdown()
+    ray.init(num_cpus=NUM_WORKERS)
     for ch1, ch2, name in pairwise_chs:
-        R_map = create_rmap(ch1, ch2)
-    
-        fig = plt.figure()
-        cmap = matplotlib.colormaps['jet']
+        for n_offsets in [4, 8, 16, 32]:
+            stride = 16
+            R_map_dim = (2*n_offsets+1)
+            R_map = np.zeros((R_map_dim, R_map_dim))
+            with open('info.txt', 'w') as f:
+                with redirect_stdout(f):
+                    print(f"Calculating: {name}")
+                    print(f"stride: {stride}, n_offset: {n_offsets}")
+                    print("n_offsets is how many strides to take away from the unshifted image.")
+                    print("This will be done for each direction (i.e. up, down, left, right).")
+                    total_shift = stride * (2 * n_offsets) + 1
+                    print(f"Shifted area in pixels: {total_shift} x {total_shift}")
+                    print('"Shifted area" is the bounding box that encompasses all pairs of offsets')
+                    micron_per_pixel = 0.05 # IMAGE SPECIFIC!!! i.e. this is HARD-CODED!
+                    total_len = total_shift * micron_per_pixel
+                    print(f"That area is {total_len:.2f} x {total_len} microns:.2f")
+                    print(f"given that this specific image has {micron_per_pixel} microns pixel side lengths.")
+                    print("Note that the usable width of the cropped image is ~70 microns, so going too far")
+                    print("beyond that with shifted area is not recommended.")
+                    print("========")
+                    
+            @ray.remote
+            def rmap_worker(_ch1, _ch2, i, n_offsets, stride=1):
+                # R_map ends up being (2 * n_offset + 1)**2 pixels
+                R_map_portion = np.zeros(((2*n_offsets)+1))
+                # this channel does not move
+                # this channel can have values equal to 0
+                _static_ch = _ch1[n_offsets*stride:(-1*n_offsets-1)*stride, n_offsets*stride:(-1*n_offsets-1)*stride]
+                for j in range(0, (2*n_offsets+1)*stride, stride):
+                    # this channel should not have 0s
+                    _slide_ch = _ch2[i*stride:i*stride-(2*n_offsets+1)*stride, j:j-(2*n_offsets+1)*stride]
+                    # make sure we're not including any 0s from the blank crop margins
+                    slide_ch = _slide_ch[np.logical_and(_static_ch > 0, _slide_ch > 0)]
+                    static_ch = _static_ch[np.logical_and(_static_ch > 0, _slide_ch > 0)]
+                    R1 = np.corrcoef(static_ch.flatten(), slide_ch.flatten())
+                    R_map_portion[j//stride] = R1[0,1]
+                    print(f'R_map[{i},{j//stride}]: {R1[0,1]}')
+                return (i, R_map_portion)
+            
+            ray_ch1  = ray.put(ch1)
+            ray_ch2  = ray.put(ch2)
+            futures = []
+            for i in range(0, (2*n_offsets+1)*stride, stride):
+                futures.append(rmap_worker.remote(ray_ch1, ray_ch2, i//stride, n_offsets, stride))
+            results = ray.get(futures)
+            for i, R_map_portion in results:
+                R_map[i,:] = R_map_portion 
         
-        _R_map = plt.imshow(R_map, cmap=cmap, interpolation='none', vmax=1, vmin=-0.2)
-        plt.colorbar(_R_map)
-        
-        R_map_path = os.path.join(results_dir, f'{condition}_{name}_Rmap')
-        np.save(R_map_path + ".npy", R_map)
-        plt.savefig(R_map_path + ".png", dpi=300)
-        plt.close(fig)
+            fig = plt.figure()
+            cmap = matplotlib.colormaps['jet']
+            
+            _R_map = plt.imshow(R_map, cmap=cmap, interpolation='none', vmax=1, vmin=-0.2)
+            plt.colorbar(_R_map)
+            
+            R_map_path = os.path.join(results_dir, f'{condition}_{name}_{stride}stride_{n_offsets}offsets_Rmap')
+            np.save(R_map_path + ".npy", R_map)
+            plt.savefig(R_map_path + ".png", dpi=300)
+            plt.close(fig)
+            ray.shutdown()
